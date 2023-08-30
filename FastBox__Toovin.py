@@ -77,7 +77,21 @@ def save_region(image, x, y):
 
     region = image.crop((left, top, right, bottom))
     print("Attempting to open save dialog...")
-    save_path = filedialog.asksaveasfilename(defaultextension=".jpg", filetypes=[("JPEG files", "*.jpg")])
+    save_path = filedialog.asksaveasfilename(
+    defaultextension=".jpg",
+    filetypes=(
+        ("JPEG files", "*.jpg"),
+        ("PNG files", "*.png"),
+        ("BMP files", "*.bmp"),
+        ("WEBP files", "*.webp"),
+        ("GIF files", "*.gif"),
+        ("ICO files", "*.ico"),
+        (
+            "TIFF files",
+            "*.tif;*.tiff",
+        ),  # Note that you can use a semicolon to support multiple patterns in a single tuple.
+    ),
+)
     if save_path:
         print("Saving image to:", save_path)
         region.save(save_path)
@@ -134,25 +148,26 @@ root = tk.Tk()
 screen_height = root.winfo_screenheight()
 canvas_max_height = screen_height - 100
 root.title("Image Box Extractor")
-root.focus_set()  # Set focus to the main window
+
 image_path = open_image()
 
 btn = tk.Button(root, text="Capture", command=capture_image)
 btn.pack()
-
+##root.focus_set()  # Set focus to the main window
 if image_path:
+    root.focus_force()
     dir_path = os.path.dirname(image_path)
     image_files = [os.path.abspath(os.path.join(dir_path, f)) for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f)) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif'))]
     current_image_index = image_files.index(image_path)
     image = Image.open(image_path)
     tk_image = ImageTk.PhotoImage(image)
-    canvas = tk.Canvas(root, width=image.width, height=min(image.height, canvas_max_height))
+    canvas = tk.Canvas(root, width=image.width, height=min(image.height, canvas_max_height)) # this gotta change
     canvas.pack()
     canvas.focus_force()  # forcefully set the focus on the canvas
     canvas.bind("<FocusIn>", on_focus_in)
     canvas.bind("<FocusOut>", on_focus_out)
     canvas.focus_set()
-    # Create a rectangle that's 512x512
+    # Create a rectangle that's 512x512. Neat.
     rect = canvas.create_rectangle(0, 0, 512, 512, outline="red")
     box_size_text = canvas.create_text(
         canvas.winfo_width() / 2,
@@ -173,4 +188,5 @@ if image_path:
     root.bind("<Left>", navigate)
     root.bind("<Right>", navigate)
 
+canvas.after(100, canvas.focus_set)  # Wait 100ms and then set the focus.
 root.mainloop()
