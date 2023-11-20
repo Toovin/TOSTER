@@ -1,0 +1,163 @@
+# Tested in Python 3.9.13 [ pip install json pyqt5 ]
+# Created with heavy lifting done by Chat.Openai.Com, and Phind-CodeLlama34b (local via oobabooga webui)
+# Create and edit formatted Instruct-Input-Output JSON files for LLM projects. EXTREME-ly simple and lightweight, probably bugs. 
+# I foresee needing a scroll bar once your entries get large enough. Soon™ - feel free to modify this as you wish. 
+
+import sys
+import json
+from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout,
+                             QLabel, QLineEdit, QTextEdit, QPushButton,
+                             QFileDialog, QListWidget)
+
+
+
+class JSONEntryUI(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        self.entries = []
+
+    def initUI(self):
+        # Overall layout
+        main_layout = QHBoxLayout(self)
+
+        # Left layout for inputs and buttons
+        left_layout = QVBoxLayout()
+
+        # Instruction input
+        self.instruction_label = QLabel("Instruction:")
+        self.instruction_input = QLineEdit()
+        left_layout.addWidget(self.instruction_label)
+        left_layout.addWidget(self.instruction_input)
+
+        # Input text
+        self.input_label = QLabel("Input:")
+        self.input_text = QLineEdit()
+        left_layout.addWidget(self.input_label)
+        left_layout.addWidget(self.input_text)
+
+        # Output text
+        self.output_label = QLabel("Output:")
+        self.output_text = QTextEdit()
+        left_layout.addWidget(self.output_label)
+        left_layout.addWidget(self.output_text)
+
+        # Save Button
+        self.save_button = QPushButton("Save Entry")
+        self.save_button.clicked.connect(self.save_entry)
+        left_layout.addWidget(self.save_button)
+
+        # Save All Button
+        self.save_all_button = QPushButton("Save All to JSON")
+        self.save_all_button.clicked.connect(self.save_all)
+        left_layout.addWidget(self.save_all_button)
+
+        # Load JSON Button
+        self.load_json_button = QPushButton("Load Data/JSON")
+        self.load_json_button.clicked.connect(self.load_data)
+        left_layout.addWidget(self.load_json_button)
+
+        # Center layout for the list to display instructions
+        center_layout = QVBoxLayout()
+        self.instructions_list = QListWidget()
+        self.instructions_list.setMaximumWidth(200)
+        self.instructions_list.itemClicked.connect(self.display_selected_entry)
+        center_layout.addWidget(self.instructions_list)
+
+        # Right layout for displaying selected entry details
+        right_layout = QVBoxLayout()
+        self.selected_instruction_label = QLabel("Selected Instruction:")
+        self.selected_instruction_input = QLineEdit()
+        self.selected_input_label = QLabel("Selected Input:")
+        self.selected_input_text = QLineEdit()
+        self.selected_output_label = QLabel("Selected Output:")
+        self.selected_output_text = QTextEdit()
+        self.update_selected_button = QPushButton("Update Selected Entry")
+        self.update_selected_button.clicked.connect(self.update_selected_entry)
+        right_layout.addWidget(self.selected_instruction_label)
+        right_layout.addWidget(self.selected_instruction_input)
+        right_layout.addWidget(self.selected_input_label)
+        right_layout.addWidget(self.selected_input_text)
+        right_layout.addWidget(self.selected_output_label)
+        right_layout.addWidget(self.selected_output_text)
+        right_layout.addWidget(self.update_selected_button)
+
+        # Add left, center, and right layouts to the main layout
+        main_layout.addLayout(left_layout)
+        main_layout.addLayout(center_layout)
+        main_layout.addLayout(right_layout)
+
+        self.setLayout(main_layout)
+        self.setWindowTitle("JSON Data Entry")
+        self.show()
+    def display_selected_entry(self, item):
+        # Find the entry with the matching instruction
+        for entry in self.entries:
+            if entry['instruction'] == item.text():
+                self.selected_instruction_input.setText(entry['instruction'])
+                self.selected_input_text.setText(entry['input'])
+                self.selected_output_text.setText(entry['output'])
+                break
+
+    def update_selected_entry(self):
+        selected_text = self.instructions_list.currentItem().text()
+        for entry in self.entries:
+            if entry['instruction'] == selected_text:
+                # Update the entry details
+                entry['instruction'] = self.selected_instruction_input.text()
+                entry['input'] = self.selected_input_text.text()
+                entry['output'] = self.selected_output_text.toPlainText()
+                # Update the instruction list display
+                self.update_instructions_list()
+                break
+
+    def save_entry(self):
+        entry = {
+            "instruction": self.instruction_input.text(),
+            "input": self.input_text.text(),
+            "output": self.output_text.toPlainText()
+        }
+        self.entries.append(entry)
+        self.update_instructions_list()  # Update the instructions list
+        self.instruction_input.clear()
+        self.input_text.clear()
+        self.output_text.clear()
+
+    def update_instructions_list(self):
+        self.instructions_list.clear()  # Clear the list before repopulating
+        for entry in self.entries:
+            self.instructions_list.addItem(entry['instruction'])
+
+    def save_all(self):
+        options = QFileDialog.Options()
+        filename, _ = QFileDialog.getSaveFileName(self, "Save File", "", "JSON Files (*.json);;All Files (*)",
+                                                  options=options)
+        if filename:
+            with open(filename, 'w', encoding='utf-8') as f:
+                json.dump(self.entries, f, ensure_ascii=False, indent=4)
+
+    def load_data(self):
+        # Function to load data from a JSON file and update the UI
+        options = QFileDialog.Options()
+        filename, _ = QFileDialog.getOpenFileName(self, "Load JSON File", "", "JSON Files (*.json);;All Files (*)", options=options)
+        if filename:
+            with open(filename, 'r', encoding='utf-8') as f:
+                self.entries = json.load(f)
+            self.update_instructions_list()
+
+    def update_instructions_list(self):
+        # Function to update the instruction list based on the entries
+        self.instructions_list.clear()
+        for entry in self.entries:
+            self.instructions_list.addItem(entry['instruction'])
+
+
+
+def main():
+    app = QApplication(sys.argv)
+    ex = JSONEntryUI()
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()
